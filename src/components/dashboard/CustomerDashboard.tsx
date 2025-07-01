@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase, Ticket, ActivityLog } from '../../lib/supabase'
 import { CreateTicketForm } from '../tickets/CreateTicketForm'
+import { TicketChat } from '../tickets/TicketChat'
 import { 
   Plus, 
   Filter, 
@@ -25,6 +26,7 @@ export const CustomerDashboard: React.FC = () => {
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateTicketModal, setShowCreateTicketModal] = useState(false)
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
 
   useEffect(() => {
     if (userProfile) {
@@ -265,13 +267,13 @@ export const CustomerDashboard: React.FC = () => {
                         </div>
                       </div>
                       <div className="ml-4 flex-shrink-0">
-                        <Link
-                          to={`/tickets/${ticket.id}`}
+                        <button
+                          onClick={() => setSelectedTicket(ticket)}
                           className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                         >
                           <MessageCircle className="h-3 w-3 mr-1" />
-                          View
-                        </Link>
+                          {ticket.status === 'open' ? 'Chat' : 'View'}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -320,6 +322,15 @@ export const CustomerDashboard: React.FC = () => {
             setShowCreateTicketModal(false)
             handleTicketCreated()
           }}
+        />
+      )}
+
+      {/* Ticket Chat Modal */}
+      {selectedTicket && (
+        <TicketChat
+          ticket={selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+          onTicketUpdate={loadTickets}
         />
       )}
     </div>

@@ -13,6 +13,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export interface Organisation {
   id: string
   name: string
+  email_domains?: string[]
   created_at: string
   updated_at: string
 }

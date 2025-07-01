@@ -12,6 +12,8 @@ import { SignupForm } from './components/auth/SignupForm'
 import { CustomerDashboard } from './components/dashboard/CustomerDashboard'
 import { AdminDashboard } from './components/dashboard/AdminDashboard'
 import { UserManagement } from './components/admin/UserManagement'
+import { OrganizationManagement } from './components/admin/OrganizationManagement'
+import { AdminTicketList } from './components/admin/AdminTicketList'
 import { CreateTicketForm } from './components/tickets/CreateTicketForm'
 
 const AppRoutes: React.FC = () => {
@@ -76,10 +78,26 @@ const AppRoutes: React.FC = () => {
         </ProtectedRoute>
       } />
 
+      <Route path="/admin/tickets" element={
+        <ProtectedRoute requiredRole={['super_admin', 'supervisory_admin', 'agent']}>
+          <Layout>
+            <AdminTicketList />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
       <Route path="/admin/users" element={
         <ProtectedRoute requiredRole={['super_admin']}>
           <Layout>
             <UserManagement />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/admin/organizations" element={
+        <ProtectedRoute requiredRole={['super_admin', 'supervisory_admin']}>
+          <Layout>
+            <OrganizationManagement />
           </Layout>
         </ProtectedRoute>
       } />
