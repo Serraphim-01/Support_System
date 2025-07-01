@@ -11,6 +11,8 @@ import { LoginForm } from './components/auth/LoginForm'
 import { SignupForm } from './components/auth/SignupForm'
 import { CustomerDashboard } from './components/dashboard/CustomerDashboard'
 import { AdminDashboard } from './components/dashboard/AdminDashboard'
+import { UserManagement } from './components/admin/UserManagement'
+import { CreateTicketForm } from './components/tickets/CreateTicketForm'
 
 const AppRoutes: React.FC = () => {
   const { user, userProfile, loading } = useAuth()
@@ -57,11 +59,27 @@ const AppRoutes: React.FC = () => {
           </Layout>
         </ProtectedRoute>
       } />
+
+      <Route path="/tickets/new" element={
+        <ProtectedRoute requiredRole={['customer']}>
+          <Layout>
+            <CreateTicketForm />
+          </Layout>
+        </ProtectedRoute>
+      } />
       
       <Route path="/admin/dashboard" element={
         <ProtectedRoute requiredRole={['super_admin', 'supervisory_admin', 'agent']}>
           <Layout>
             <AdminDashboard />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/admin/users" element={
+        <ProtectedRoute requiredRole={['super_admin']}>
+          <Layout>
+            <UserManagement />
           </Layout>
         </ProtectedRoute>
       } />

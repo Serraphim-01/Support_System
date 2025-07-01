@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase, Ticket, ActivityLog } from '../../lib/supabase'
+import { CreateTicketForm } from '../tickets/CreateTicketForm'
 import { 
   Plus, 
   Filter, 
@@ -11,7 +12,8 @@ import {
   CheckCircle, 
   XCircle,
   AlertCircle,
-  Calendar
+  Calendar,
+  Tag
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -22,6 +24,7 @@ export const CustomerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
+  const [showCreateTicketModal, setShowCreateTicketModal] = useState(false)
 
   useEffect(() => {
     if (userProfile) {
@@ -58,6 +61,11 @@ export const CustomerDashboard: React.FC = () => {
     if (!error && data) {
       setActivityLogs(data)
     }
+  }
+
+  const handleTicketCreated = () => {
+    loadTickets()
+    loadActivityLogs()
   }
 
   const filteredTickets = tickets.filter(ticket => {
@@ -115,13 +123,13 @@ export const CustomerDashboard: React.FC = () => {
           </h1>
           <p className="text-gray-600">Manage your support tickets and track progress</p>
         </div>
-        <Link
-          to="/tickets/new"
+        <button
+          onClick={() => setShowCreateTicketModal(true)}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
         >
           <Plus className="h-4 w-4 mr-2" />
           New Ticket
-        </Link>
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -220,37 +228,38 @@ export const CustomerDashboard: React.FC = () => {
               {filteredTickets.length === 0 ? (
                 <div className="p-6 text-center">
                   <p className="text-gray-500">No tickets found</p>
-                  <Link
-                    to="/tickets/new"
+                  <button
+                    onClick={() => setShowCreateTicketModal(true)}
                     className="mt-2 inline-flex items-center text-sm text-blue-600 hover:text-blue-500"
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Create your first ticket
-                  </Link>
+                  </button>
                 </div>
               ) : (
                 filteredTickets.map((ticket) => (
                   <div key={ticket.id} className="p-6 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-1">
+                        <div className="flex items-center space-x-2 mb-2">
                           {getStatusIcon(ticket.status)}
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(ticket.status)}`}>
                             {ticket.status}
                           </span>
                           {ticket.team_tag && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              <Tag className="h-3 w-3 mr-1" />
                               {ticket.team_tag}
                             </span>
                           )}
                         </div>
-                        <h3 className="text-sm font-medium text-gray-900 truncate">
+                        <h3 className="text-sm font-medium text-gray-900 mb-1">
                           {ticket.title}
                         </h3>
-                        <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+                        <p className="text-sm text-gray-500 line-clamp-2 mb-2">
                           {ticket.description}
                         </p>
-                        <div className="mt-2 flex items-center text-xs text-gray-500">
+                        <div className="flex items-center text-xs text-gray-500">
                           <Calendar className="h-3 w-3 mr-1" />
                           {format(new Date(ticket.created_at), 'MMM d, yyyy')}
                         </div>
@@ -302,6 +311,17 @@ export const CustomerDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Create Ticket Modal */}
+      {showCreateTicketModal && (
+        <CreateTicketForm
+          isModal={true}
+          onClose={() => {
+            setShowCreateTicketModal(false)
+            handleTicketCreated()
+          }}
+        />
+      )}
     </div>
   )
 }
