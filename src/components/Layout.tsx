@@ -9,7 +9,8 @@ import {
   Users,
   Building2,
   Shield,
-  Activity
+  Activity,
+  BarChart3
 } from 'lucide-react'
 
 interface LayoutProps {
@@ -47,6 +48,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         { name: 'Teams', href: '/admin/teams', icon: Users },
         { name: 'Organizations', href: '/admin/organizations', icon: Building2 },
         { name: 'User Management', href: '/admin/users', icon: Shield },
+        { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
       ]
     }
 
@@ -54,8 +56,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       return [
         ...baseItems,
         { name: 'Team Tickets', href: '/admin/tickets', icon: Ticket },
-        { name: 'Team Members', href: '/admin/team-members', icon: Users },
+        { name: 'Teams', href: '/admin/teams', icon: Users },
         { name: 'Organizations', href: '/admin/organizations', icon: Building2 },
+        { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
       ]
     }
 
@@ -63,6 +66,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       return [
         ...baseItems,
         { name: 'My Tickets', href: '/admin/tickets', icon: Ticket },
+        { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
       ]
     }
 

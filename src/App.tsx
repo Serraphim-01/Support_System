@@ -13,6 +13,8 @@ import { CustomerDashboard } from './components/dashboard/CustomerDashboard'
 import { AdminDashboard } from './components/dashboard/AdminDashboard'
 import { UserManagement } from './components/admin/UserManagement'
 import { OrganizationManagement } from './components/admin/OrganizationManagement'
+import { TeamManagement } from './components/admin/TeamManagement'
+import { Analytics } from './components/admin/Analytics'
 import { AdminTicketList } from './components/admin/AdminTicketList'
 import { CreateTicketForm } from './components/tickets/CreateTicketForm'
 
@@ -86,6 +88,14 @@ const AppRoutes: React.FC = () => {
         </ProtectedRoute>
       } />
 
+      <Route path="/admin/teams" element={
+        <ProtectedRoute requiredRole={['super_admin', 'supervisory_admin']}>
+          <Layout>
+            <TeamManagement />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
       <Route path="/admin/users" element={
         <ProtectedRoute requiredRole={['super_admin']}>
           <Layout>
@@ -98,6 +108,14 @@ const AppRoutes: React.FC = () => {
         <ProtectedRoute requiredRole={['super_admin', 'supervisory_admin']}>
           <Layout>
             <OrganizationManagement />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/admin/analytics" element={
+        <ProtectedRoute requiredRole={['super_admin', 'supervisory_admin', 'agent']}>
+          <Layout>
+            <Analytics />
           </Layout>
         </ProtectedRoute>
       } />
