@@ -1,37 +1,52 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useAuth } from '../../hooks/useAuth'
+import { useAuth } from '../../hooks/useAuth' // Custom hook
 import { supabase, Ticket, TicketMessage, User } from '../../lib/supabase'
-import { 
-  Send, 
-  X, 
-  MessageCircle, 
-  Clock, 
-  CheckCircle, 
+import {
+  Send,
+  X,
+  MessageCircle,
+  Clock,
+  CheckCircle,
   XCircle,
   AlertCircle,
   User as UserIcon,
   Shield,
   Circle
-} from 'lucide-react'
-import { format } from 'date-fns'
-import { useForm } from 'react-hook-form'
+} from 'lucide-react' // Icons
+import { format } from 'date-fns' // Date formatting
+import { useForm } from 'react-hook-form' // Form Handling
 
+// Props Interface
 interface TicketChatProps {
   ticket: Ticket
   onClose: () => void
   onTicketUpdate?: () => void
 }
 
+// Type of form Input
 interface MessageFormData {
   message: string
 }
 
+// Extended message type with joined user details
 interface MessageWithUser extends TicketMessage {
   user?: User
 }
 
+interface PresenceUserMeta {
+  user_id: string
+  user_name: string
+  user_role: string
+  online_at: string
+}
+
+// Ticket Component
 export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicketUpdate }) => {
+
+  // Current user's profile
   const { userProfile } = useAuth()
+
+  // Local State
   const [messages, setMessages] = useState<MessageWithUser[]>([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -39,20 +54,23 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
   const [ticketData, setTicketData] = useState<Ticket>(ticket)
   const [showResolutionOptions, setShowResolutionOptions] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  
+
+  // Set up Hook form
   const { register, handleSubmit, reset, formState: { errors } } = useForm<MessageFormData>()
 
+  // Load messages & setup subscriptions when component mounts / ticket.id changes
   useEffect(() => {
     loadMessages()
     subscribeToMessages()
     subscribeToPresence()
-    
+
     return () => {
-      // Clean up subscriptions
+      // Clean up subscriptions when component unmounts
       supabase.removeAllChannels()
     }
   }, [ticket.id])
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom()
   }, [messages])
@@ -61,13 +79,14 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Load all messages for this ticket from supabase
   const loadMessages = async () => {
     const { data, error } = await supabase
       .from('ticket_messages')
       .select(`
         *,
         user:users(*)
-      `)
+      `) // Join user info
       .eq('ticket_id', ticket.id)
       .order('created_at', { ascending: true })
 
@@ -77,6 +96,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
     setLoading(false)
   }
 
+  // Real Time subscription for new messages
   const subscribeToMessages = () => {
     const channel = supabase
       .channel(`ticket_messages:${ticket.id}`)
@@ -101,6 +121,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
             user: userData
           } as MessageWithUser
 
+          // Append new messages to state
           setMessages(prev => [...prev, newMessage])
         }
       )
@@ -111,12 +132,16 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
     }
   }
 
+  // Presence subscription to track online users in the ticket
   const subscribeToPresence = () => {
     const channel = supabase
       .channel(`ticket_presence:${ticket.id}`)
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState()
-        const users = Object.keys(state).map(key => state[key][0].user_id)
+        const users = Object.values(state).map((presenceList) => {
+          const meta = presenceList[0] as unknown as PresenceUserMeta
+          return meta.user_id
+        })
         setOnlineUsers(users)
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
@@ -141,6 +166,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
     }
   }
 
+  // Send a message
   const sendMessage = async (data: MessageFormData) => {
     if (!userProfile || !data.message.trim()) return
 
@@ -155,13 +181,13 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
         })
 
       if (!error) {
-        reset()
-        
+        reset() // Clear input field
+
         // Log activity
         await supabase.from('activity_logs').insert({
           user_id: userProfile.id,
           action: 'Sent message in ticket',
-          details: { 
+          details: {
             ticket_id: ticket.id,
             ticket_title: ticket.title
           }
@@ -174,7 +200,9 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
     }
   }
 
-  const updateTicketStatus = async (status: string) => {
+  // Change ticket status (open, closed, resolved, unresolved)
+  const updateTicketStatus = async (status: "open" | "closed" | "resolved" | "unresolved"
+  ) => {
     if (!userProfile) return
 
     try {
@@ -185,12 +213,12 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
 
       if (!error) {
         setTicketData(prev => ({ ...prev, status }))
-        
+
         // Log activity
         await supabase.from('activity_logs').insert({
           user_id: userProfile.id,
           action: `Ticket status changed to ${status}`,
-          details: { 
+          details: {
             ticket_id: ticket.id,
             ticket_title: ticket.title,
             new_status: status
@@ -201,6 +229,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
           onTicketUpdate()
         }
 
+        // If customer and ticket closed, show resolution options
         if (status === 'closed' && userProfile.role === 'customer') {
           setShowResolutionOptions(true)
         }
@@ -210,12 +239,13 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
     }
   }
 
+  // Customer chooses how to resolve after ticket closed
   const handleResolutionChoice = async (choice: 'resolved' | 'unresolved') => {
     if (choice === 'resolved') {
       await updateTicketStatus('resolved')
       setShowResolutionOptions(false)
     } else {
-      // Create escalation request
+      // Create escalation request for unresolved tickets
       try {
         const { error } = await supabase
           .from('ticket_escalations')
@@ -229,7 +259,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
         if (!error) {
           await updateTicketStatus('unresolved')
           setShowResolutionOptions(false)
-          
+
           // Send system message
           await supabase.from('ticket_messages').insert({
             ticket_id: ticket.id,
@@ -243,6 +273,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
     }
   }
 
+  // Helpers for UI (status icon & color)
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'open':
@@ -273,6 +304,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
     }
   }
 
+  // Pole-based flags
   const isCustomer = userProfile?.role === 'customer'
   const isAdmin = userProfile?.role && ['super_admin', 'supervisory_admin', 'agent'].includes(userProfile.role)
   const canCloseTicket = isAdmin && ticketData.status === 'open'
@@ -295,7 +327,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-2">{ticketData.description}</p>
-            
+
             {/* Online Users */}
             {onlineUsers.length > 0 && (
               <div className="flex items-center space-x-2 text-xs text-gray-500">
@@ -304,7 +336,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {/* Status Controls */}
             {canCloseTicket && (
@@ -323,7 +355,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
                 Reopen Ticket
               </button>
             )}
-            
+
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -350,11 +382,10 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
                 key={message.id}
                 className={`flex ${message.user_id === userProfile?.id ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  message.user_id === userProfile?.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-900'
-                }`}>
+                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.user_id === userProfile?.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-900'
+                  }`}>
                   <div className="flex items-center space-x-2 mb-1">
                     {message.user?.role === 'customer' ? (
                       <UserIcon className="h-3 w-3" />
@@ -430,7 +461,7 @@ export const TicketChat: React.FC<TicketChatProps> = ({ ticket, onClose, onTicke
         {ticketData.status !== 'open' && (
           <div className="text-center py-4 bg-gray-50 rounded-md">
             <p className="text-sm text-gray-600">
-              This ticket is {ticketData.status}. 
+              This ticket is {ticketData.status}.
               {isAdmin && ' You can reopen it to continue the conversation.'}
             </p>
           </div>

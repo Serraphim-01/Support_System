@@ -26,67 +26,74 @@ export const useAuthProvider = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-  const init = async () => {
-    localStorage.clear()
-    const { data, error } = await supabase.auth.getSession()
+    const init = async () => {
+      // localStorage.clear()
+      const { data: { session } } = await supabase.auth.getSession()
 
-    if (error || !data.session || !data.session.user) {
-      console.warn('No valid session found. Logging out.')
-      localStorage.clear()
-      await supabase.auth.signOut()
-      setUser(null)
-      setUserProfile(null)
-      setLoading(false)
-      return
-    }
+      if (session?.user) {
+        setUser(session.user)
+        await loadUserProfile(session.user.id)
+      } else {
+        // Fallback to getUser
+        const { data: userData, error } = await supabase.auth.getUser()
+        if (userData?.user) {
+          setUser(userData.user)
+          await loadUserProfile(userData.user.id)
+        } else {
+          console.warn('No active session')
+          setUser(null)
+          setUserProfile(null)
+        }
+      }
 
-    setUser(data.session.user)
-    await loadUserProfile(data.session.user.id)
-  }
-
-  init()
-
-  const {
-    data: { subscription }
-  } = supabase.auth.onAuthStateChange(async (event, session) => {
-    setUser(session?.user ?? null)
-
-    if (session?.user) {
-      await loadUserProfile(session.user.id)
-    } else {
-      setUserProfile(null)
       setLoading(false)
     }
-  })
 
-  return () => subscription.unsubscribe()
-}, [])
+    init()
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser(session.user)
+        setTimeout(() => loadUserProfile(session.user.id), 100)
+      } else {
+        setUser(null)
+        setUserProfile(null)
+      }
+      setLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
 
-const loadUserProfile = async (userId: string) => {
-  console.log("Loading profile for user:", userId)
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
+  const loadUserProfile = async (userId: string) => {
+    console.log("Loading profile for user:", userId)
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
 
-    if (error) {
-      console.error('loadUserProfile Supabase error:', error)
+      if (error) {
+        console.error('Supabase error loading profile:', error)
+        console.log('Did you configure RLS? Is JWT applied?')
+        setUserProfile(null)
+      } else {
+        setUserProfile(data)
+        console.log('User profile loaded:', data)
+      }
+    } catch (err) {
+      console.error('Unexpected error loading user profile:', err)
       setUserProfile(null)
-    } else {
-      setUserProfile(data)
-      console.log('User profile loaded:', data)
+    } finally {
+      console.log("Loading complete")
+      setLoading(false)
     }
-  } catch (err) {
-    console.error('Unexpected error loading user profile:', err)
-    setUserProfile(null)
-  } finally {
-    setLoading(false)
-    console.log("Loading complete")
   }
-}
+
 
   const signUp = async (
     email: string,
@@ -98,19 +105,18 @@ const loadUserProfile = async (userId: string) => {
   ) => {
     try {
       const { data, error } = await supabase.auth.signUp({
-  email,
-  password,
-  options: {
-    emailRedirectTo: `${window.location.origin}/login`,
-    data: {
-      name,
-      organisationId, // valid UUID string
-      role,
-      key: role !== 'customer' ? key : null,
-    }
-  }
-})
-
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+          data: {
+            name,
+            organisationId, // valid UUID string
+            role,
+            key: role !== 'customer' ? key : null,
+          }
+        }
+      })
 
       if (error) return { error }
 

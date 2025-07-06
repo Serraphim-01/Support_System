@@ -20,9 +20,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <LoadingSpinner />
   }
 
-  if (!user || !userProfile) {
-    return <Navigate to={redirectTo} replace />
-  }
+  if (loading) return <LoadingSpinner />
+
+  if (!user || !userProfile) return <Navigate to={redirectTo} replace />
 
   if (requiredRole && !requiredRole.includes(userProfile.role)) {
     const dashboardPath = userProfile.role === 'customer' ? '/dashboard' : '/admin/dashboard'
